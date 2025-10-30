@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>🏠 FunHomeWeb Produkter</title>
+    <style>
+        body {
+          font-family: "Segoe UI", Arial, sans-serif;
+          background-color: #f7f9fc;
+          margin: 0;
+          padding: 0;
+        }
+
+        .container {
+          width: 90%;
+          max-width: 900px;
+          margin: 50px auto;
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          padding: 30px;
+        }
+
+        h1 {
+          text-align: center;
+          color: #2b3d52;
+          margin-bottom: 30px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+        }
+
+        th, td {
+          padding: 12px 15px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+
+        th {
+          background-color: #f1f5fb;
+          color: #333;
+        }
+
+        tr:hover {
+          background-color: #f9fcff;
+        }
+
+        form {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: center;
+        }
+
+        input {
+          padding: 10px;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          width: 200px;
+        }
+
+        button {
+          padding: 10px 18px;
+          border: none;
+          border-radius: 5px;
+          color: white;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        .add-btn { background-color: #28a745; }
+        .add-btn:hover { background-color: #218838; }
+
+        .edit-btn { background-color: #007bff; }
+        .edit-btn:hover { background-color: #0056b3; }
+
+        .delete-btn { background-color: #dc3545; }
+        .delete-btn:hover { background-color: #b02a37; }
+
+        td button {
+          margin-right: 5px;
+        }
+
+        @media (max-width: 600px) {
+          table, th, td {
+            font-size: 14px;
+          }
+          input { width: 100%; }
+          form { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🛋️ FunHomeWeb Produkter</h1>
+
+    <table id="productTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Namn</th>
+            <th>Pris</th>
+            <th>Åtgärder</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <form id="addProductForm">
+        <input type="text" id="name" placeholder="Produktnamn" required>
+        <input type="number" id="price" placeholder="Pris" required>
+        <button type="submit" class="add-btn">Lägg till</button>
+    </form>
+</div>
+
+<script>
+    const apiUrl = '/products';
+    let editingProductId = null;
+
+    async function loadProducts() {
+      const response = await fetch(apiUrl);
+      const products = await response.json();
+      const tbody = document.querySelector('#productTable tbody');
+      tbody.innerHTML = '';
+      products.forEach(p => {
+        const row = `<tr>
+          <td>${p.id}</td>
+          <td>${p.name}</td>
+          <td>${p.price} kr</td>
+          <td>
+            <button class="edit-btn" onclick="editProduct(${p.id}, '${p.name}', ${p.price})">Ändra</button>
+            <button class="delete-btn" onclick="deleteProduct(${p.id})">Ta bort</button>
+          </td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('Vill du verkligen ta bort denna produkt?')) return;
+      const response = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        loadProducts();
+      } else {
+        alert('Kunde inte ta bort produkten.');
+      }
+    }
+
+    function editProduct(id, name, price) {
+      document.getElementById('name').value = name;
+      document.getElementById('price').value = price;
+      editingProductId = id;
+      document.querySelector('.add-btn').textContent = '💾 Spara ändringar';
+      document.querySelector('.add-btn').classList.remove('add-btn');
+      document.querySelector('button').classList.add('edit-btn');
+    }
+
+    document.getElementById('addProductForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const name = document.getElementById('name').value;
+      const price = document.getElementById('price').value;
+
+      if (editingProductId) {
+        const response = await fetch(`${apiUrl}/${editingProductId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name, price })
+        });
+        if (response.ok) {
+          editingProductId = null;
+          document.querySelector('button').textContent = 'Lägg till';
+          document.querySelector('button').classList.remove('edit-btn');
+          document.querySelector('button').classList.add('add-btn');
+          document.getElementById('addProductForm').reset();
+          loadProducts();
+        } else {
+          alert('Fel vid uppdatering.');
+        }
+      } else {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name, price })
+        });
+        if (response.ok) {
+          document.getElementById('addProductForm').reset();
+          loadProducts();
+        } else {
+          alert('Fel vid tilläggning.');
+        }
+      }
+    });
+
+    loadProducts();
+</script>
+</body>
+</html>
