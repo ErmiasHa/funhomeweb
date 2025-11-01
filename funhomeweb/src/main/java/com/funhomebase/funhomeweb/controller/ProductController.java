@@ -3,51 +3,44 @@ package com.funhomebase.funhomeweb.controller;
 import com.funhomebase.funhomeweb.model.Product;
 import com.funhomebase.funhomeweb.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
-
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/api/products")
+@CrossOrigin(origins = "*")
 public class ProductController {
 
     @Autowired
-    private ProductRepository productRepository;
+    private ProductRepository repository;
 
     @GetMapping
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    @PreAuthorize("hasAnyRole('ADMIN','CUSTOMER')")
+    public List<Product> getAll(@RequestParam(required = false) String category) {
+        if (category != null && !category.isBlank()) {
+            return repository.findByCategoryIgnoreCase(category);
+        }
+        return repository.findAll();
     }
 
     @PostMapping
-    public Product createProduct(@RequestBody Product product) {
-        return productRepository.save(product);
+    @PreAuthorize("hasRole('ADMIN')")
+    public Product create(@RequestBody Product product) {
+        return repository.save(product);
     }
 
-    // DELETE – ta bort produkt efter ID
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
-        if (productRepository.existsById(id)) {
-            productRepository.deleteById(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } else {
-            return ResponseEntity.notFound().build();  // 404 Not Found
-        }
-    }
-
-    // PUT – uppdatera produkt
     @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product updatedProduct) {
-        return productRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(updatedProduct.getName());
-                    existing.setPrice(updatedProduct.getPrice());
-                    Product saved = productRepository.save(existing);
-                    return ResponseEntity.ok(saved);
-                })
-                .orElse(ResponseEntity.notFound().build());
+    @PreAuthorize("hasRole('ADMIN')")
+    public Product update(@PathVariable String id, @RequestBody Product product) {
+        product.setId(id);
+        return repository.save(product);
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void delete(@PathVariable String id) {
+        repository.deleteById(id);
+    }
 }

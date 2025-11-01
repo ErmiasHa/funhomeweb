@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>🏠 FunHomeWeb Produkter</title>
+
     <style>
         body {
           font-family: "Segoe UI", Arial, sans-serif;
@@ -11,20 +12,58 @@
           padding: 0;
         }
 
+        /* 🌐 NAVBAR */
+        .navbar {
+          background-color: #2b3d52;
+          color: white;
+          padding: 15px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .navbar .brand {
+          font-size: 22px;
+          font-weight: bold;
+        }
+
+        .navbar .nav-links {
+          display: flex;
+          gap: 15px;
+        }
+
+        .navbar a {
+          color: white;
+          text-decoration: none;
+          padding: 8px 12px;
+          border-radius: 5px;
+          transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+          background-color: rgba(255,255,255,0.15);
+        }
+
+        .navbar .user-info {
+          font-size: 14px;
+          color: #ddd;
+        }
+
+        /* 🧾 CONTAINER */
         .container {
           width: 90%;
-          max-width: 900px;
-          margin: 50px auto;
-          background: #fff;
+          max-width: 1100px;
+          margin: 40px auto;
+          background: white;
           border-radius: 12px;
           box-shadow: 0 4px 15px rgba(0,0,0,0.1);
           padding: 30px;
         }
 
-        h1 {
+        h1, h2 {
           text-align: center;
           color: #2b3d52;
-          margin-bottom: 30px;
         }
 
         table {
@@ -44,24 +83,6 @@
           color: #333;
         }
 
-        tr:hover {
-          background-color: #f9fcff;
-        }
-
-        form {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: center;
-        }
-
-        input {
-          padding: 10px;
-          border: 1px solid #ccc;
-          border-radius: 5px;
-          width: 200px;
-        }
-
         button {
           padding: 10px 18px;
           border: none;
@@ -72,129 +93,233 @@
         }
 
         .add-btn { background-color: #28a745; }
-        .add-btn:hover { background-color: #218838; }
-
-        .edit-btn { background-color: #007bff; }
-        .edit-btn:hover { background-color: #0056b3; }
-
         .delete-btn { background-color: #dc3545; }
-        .delete-btn:hover { background-color: #b02a37; }
+        .checkout-btn { background-color: #17a2b8; }
+        .pay-btn { background-color: #635bff; }
 
-        td button {
-          margin-right: 5px;
+        button:hover { opacity: 0.9; }
+
+        .cart-section, .orders-section {
+          border-top: 2px solid #ddd;
+          padding-top: 20px;
+          margin-top: 30px;
         }
 
-        @media (max-width: 600px) {
-          table, th, td {
-            font-size: 14px;
-          }
-          input { width: 100%; }
-          form { flex-direction: column; align-items: stretch; }
+        .order-card {
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          margin: 10px 0;
+          padding: 15px;
+          background-color: #f9f9f9;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* 🔔 TOAST */
+        .toast {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background-color: #2b3d52;
+          color: white;
+          padding: 12px 18px;
+          border-radius: 8px;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: all 0.5s ease;
+          z-index: 9999;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .toast.show {
+          opacity: 1;
+          transform: translateY(0);
         }
     </style>
 </head>
+
 <body>
+<div class="navbar">
+    <div class="brand">🏠 FunHomeWeb</div>
+    <div class="nav-links">
+        <a href="/index.html">Produkter</a>
+        <a href="#ordersSection">Beställningar</a>
+        <a href="/dashboard.html" id="dashboardLink" style="display:none;">Dashboard</a>
+        <a href="#" onclick="logout()">Logga ut</a>
+    </div>
+    <div class="user-info" id="userInfo"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
 <div class="container">
-    <h1>🛋️ FunHomeWeb Produkter</h1>
+    <h1>🛋️ Produkter</h1>
 
     <table id="productTable">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Namn</th>
-            <th>Pris</th>
-            <th>Åtgärder</th>
-        </tr>
-        </thead>
+        <thead><tr><th>Namn</th><th>Pris</th><th>Kategori</th><th>Åtgärder</th></tr></thead>
         <tbody></tbody>
     </table>
 
-    <form id="addProductForm">
-        <input type="text" id="name" placeholder="Produktnamn" required>
-        <input type="number" id="price" placeholder="Pris" required>
-        <button type="submit" class="add-btn">Lägg till</button>
-    </form>
+    <div class="cart-section">
+        <h2>🛒 Kundvagn</h2>
+        <table id="cartTable">
+            <thead><tr><th>Produkt</th><th>Pris</th><th>Antal</th><th>Totalt</th><th></th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <p><strong>Totalt belopp:</strong> <span id="totalAmount">0</span> kr</p>
+        <button class="checkout-btn" onclick="placeOrder()">✅ Skapa beställning</button>
+        <button class="pay-btn" id="checkoutBtn">💳 Betala med kort</button>
+    </div>
+
+    <div class="orders-section" id="ordersSection">
+        <h2>📦 Dina beställningar</h2>
+        <div id="ordersContainer"></div>
+    </div>
 </div>
 
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-    const apiUrl = '/products';
-    let editingProductId = null;
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+    const email = localStorage.getItem("email");
+    const apiUrl = "/api/products";
+    const orderUrl = "/api/orders";
+    const paymentUrl = "/api/payment/create-checkout-session";
+    const stripePublicKey = "pk_test_xxxxxxxxxxxxxx"; // ← byt till din egen från Stripe Dashboard
+    let cart = [];
+
+    if (!token) window.location.href = "/login.html";
+
+    document.getElementById("userInfo").textContent = `Välkommen, ${email} (${role})`;
+    if (role === "ADMIN") document.getElementById("dashboardLink").style.display = "inline-block";
+
+    function showToast(msg, color = "#2b3d52") {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.style.backgroundColor = color;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3000);
+    }
+
+    function getAuthHeaders() {
+      return { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/login.html";
+    }
 
     async function loadProducts() {
-      const response = await fetch(apiUrl);
+      const response = await fetch(apiUrl, { headers: getAuthHeaders() });
       const products = await response.json();
-      const tbody = document.querySelector('#productTable tbody');
-      tbody.innerHTML = '';
+      const tbody = document.querySelector("#productTable tbody");
+      tbody.innerHTML = "";
       products.forEach(p => {
-        const row = `<tr>
-          <td>${p.id}</td>
-          <td>${p.name}</td>
-          <td>${p.price} kr</td>
-          <td>
-            <button class="edit-btn" onclick="editProduct(${p.id}, '${p.name}', ${p.price})">Ändra</button>
-            <button class="delete-btn" onclick="deleteProduct(${p.id})">Ta bort</button>
-          </td>
-        </tr>`;
-        tbody.innerHTML += row;
+        tbody.innerHTML += `
+          <tr>
+            <td>${p.name}</td>
+            <td>${p.price} kr</td>
+            <td>${p.category}</td>
+            <td><button class="add-btn" onclick="addToCart('${p.name}', ${p.price})">🛒 Lägg till</button></td>
+          </tr>`;
       });
     }
 
-    async function deleteProduct(id) {
-      if (!confirm('Vill du verkligen ta bort denna produkt?')) return;
-      const response = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        loadProducts();
+    function addToCart(name, price) {
+      const existing = cart.find(i => i.productName === name);
+      if (existing) existing.quantity++;
+      else cart.push({ productName: name, price, quantity: 1 });
+      renderCart();
+      showToast("🛍️ Tillagd i kundvagn!", "#28a745");
+    }
+
+    function renderCart() {
+      const tbody = document.querySelector("#cartTable tbody");
+      tbody.innerHTML = "";
+      let total = 0;
+      cart.forEach((item, i) => {
+        const subtotal = item.price * item.quantity;
+        total += subtotal;
+        tbody.innerHTML += `
+          <tr>
+            <td>${item.productName}</td>
+            <td>${item.price} kr</td>
+            <td><input type='number' min='1' value='${item.quantity}' onchange='updateQty(${i}, this.value)'></td>
+            <td>${subtotal} kr</td>
+            <td><button class='delete-btn' onclick='removeItem(${i})'>X</button></td>
+          </tr>`;
+      });
+      document.getElementById("totalAmount").textContent = total.toFixed(2);
+    }
+
+    function updateQty(i, qty) {
+      cart[i].quantity = parseInt(qty);
+      renderCart();
+    }
+
+    function removeItem(i) {
+      cart.splice(i, 1);
+      renderCart();
+      showToast("🗑️ Produkt borttagen", "#dc3545");
+    }
+
+    async function placeOrder() {
+      if (cart.length === 0) {
+        showToast("Kundvagnen är tom!", "#dc3545");
+        return;
+      }
+
+      const order = { userEmail: email, items: cart };
+      const res = await fetch(orderUrl, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify(order) });
+      if (res.ok) {
+        showToast("✅ Beställning skickad!", "#28a745");
+        cart = [];
+        renderCart();
+        loadOrders();
       } else {
-        alert('Kunde inte ta bort produkten.');
+        showToast("Fel vid beställning", "#dc3545");
       }
     }
 
-    function editProduct(id, name, price) {
-      document.getElementById('name').value = name;
-      document.getElementById('price').value = price;
-      editingProductId = id;
-      document.querySelector('.add-btn').textContent = '💾 Spara ändringar';
-      document.querySelector('.add-btn').classList.remove('add-btn');
-      document.querySelector('button').classList.add('edit-btn');
+    async function loadOrders() {
+      const res = await fetch(`/api/orders/user/${email}`, { headers: getAuthHeaders() });
+      const orders = await res.json();
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
+      if (orders.length === 0) {
+        container.innerHTML = "<p>Du har inga beställningar.</p>";
+        return;
+      }
+      orders.forEach(o => {
+        container.innerHTML += `
+          <div class='order-card'>
+            <p><strong>Order-ID:</strong> ${o.id}</p>
+            <p><strong>Datum:</strong> ${new Date(o.createdAt).toLocaleString()}</p>
+            <p><strong>Status:</strong> ${o.status}</p>
+            <p><strong>Totalt:</strong> ${o.totalPrice.toFixed(2)} kr</p>
+          </div>`;
+      });
     }
 
-    document.getElementById('addProductForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const name = document.getElementById('name').value;
-      const price = document.getElementById('price').value;
-
-      if (editingProductId) {
-        const response = await fetch(`${apiUrl}/${editingProductId}`, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ name, price })
-        });
-        if (response.ok) {
-          editingProductId = null;
-          document.querySelector('button').textContent = 'Lägg till';
-          document.querySelector('button').classList.remove('edit-btn');
-          document.querySelector('button').classList.add('add-btn');
-          document.getElementById('addProductForm').reset();
-          loadProducts();
-        } else {
-          alert('Fel vid uppdatering.');
-        }
-      } else {
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ name, price })
-        });
-        if (response.ok) {
-          document.getElementById('addProductForm').reset();
-          loadProducts();
-        } else {
-          alert('Fel vid tilläggning.');
-        }
+    // 💳 Stripe betalning
+    document.getElementById("checkoutBtn").addEventListener("click", async () => {
+      if (cart.length === 0) {
+        showToast("🛒 Kundvagnen är tom!", "#dc3545");
+        return;
       }
+
+      const response = await fetch(paymentUrl, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ items: cart })
+      });
+
+      const data = await response.json();
+      window.location.href = data.url;
     });
 
     loadProducts();
+    loadOrders();
 </script>
 </body>
 </html>

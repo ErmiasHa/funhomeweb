@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>📊 FunHomeWeb Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+          font-family: "Segoe UI", Arial, sans-serif;
+          background-color: #f7f9fc;
+          margin: 0;
+          padding: 0;
+        }
+
+        .navbar {
+          background-color: #2b3d52;
+          color: white;
+          padding: 15px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .navbar a {
+          color: white;
+          text-decoration: none;
+          margin-left: 15px;
+          font-weight: 500;
+        }
+
+        .navbar a:hover {
+          text-decoration: underline;
+        }
+
+        .container {
+          width: 90%;
+          max-width: 1100px;
+          margin: 40px auto;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          padding: 30px;
+        }
+
+        h1 {
+          text-align: center;
+          color: #2b3d52;
+        }
+
+        .stats {
+          display: flex;
+          justify-content: space-around;
+          flex-wrap: wrap;
+          margin-top: 30px;
+        }
+
+        .card {
+          background: #f1f5fb;
+          border-radius: 10px;
+          padding: 20px;
+          text-align: center;
+          width: 200px;
+          margin: 10px;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+          margin: 0;
+          color: #007bff;
+        }
+
+        .orders {
+          margin-top: 50px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+
+        th, td {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+          text-align: left;
+        }
+
+        th {
+          background-color: #f1f5fb;
+          color: #333;
+        }
+
+        tr:hover {
+          background-color: #f9f9f9;
+          cursor: pointer;
+        }
+
+        .status-pending { color: orange; }
+        .status-shipped { color: blue; }
+        .status-delivered { color: green; }
+
+        .modal {
+          display: none;
+          position: fixed;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          background-color: rgba(0,0,0,0.5);
+          justify-content: center;
+          align-items: center;
+        }
+
+        .modal-content {
+          background: #fff;
+          padding: 20px;
+          border-radius: 8px;
+          width: 500px;
+          max-height: 80%;
+          overflow-y: auto;
+          box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .close-btn {
+          float: right;
+          color: #999;
+          font-size: 22px;
+          cursor: pointer;
+        }
+
+        .close-btn:hover {
+          color: #000;
+        }
+
+        .order-item {
+          background: #f7f9fc;
+          margin-bottom: 8px;
+          padding: 8px;
+          border-radius: 5px;
+        }
+
+        .toast {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background-color: #2b3d52;
+          color: white;
+          padding: 12px 18px;
+          border-radius: 8px;
+          opacity: 0;
+          transform: translateY(20px);
+          transition: all 0.5s ease;
+          z-index: 9999;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .toast.show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+    </style>
+</head>
+
+<body>
+<div class="navbar">
+    <div>🏠 FunHomeWeb Admin</div>
+    <div>
+        <a href="/index.html">Produkter</a>
+        <a href="#" onclick="logout()">Logga ut</a>
+    </div>
+</div>
+
+<div class="container">
+    <h1>📊 Admin Dashboard</h1>
+
+    <div class="stats">
+        <div class="card"><h2 id="productCount">0</h2><p>Produkter</p></div>
+        <div class="card"><h2 id="userCount">0</h2><p>Användare</p></div>
+        <div class="card"><h2 id="totalValue">0</h2><p>Totalt värde (kr)</p></div>
+        <div class="card"><h2 id="avgPrice">0</h2><p>Snittpris (kr)</p></div>
+    </div>
+
+    <canvas id="productChart" width="400" height="200"></canvas>
+    <canvas id="categoryChart" width="400" height="200"></canvas>
+
+    <div class="orders">
+        <h2>📦 Hantera ordrar</h2>
+        <table id="ordersTable">
+            <thead>
+            <tr>
+                <th>Order-ID</th>
+                <th>Kund</th>
+                <th>Produkter</th>
+                <th>Totalt (kr)</th>
+                <th>Status</th>
+                <th>Datum</th>
+            </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <button onclick="logout()">Logga ut</button>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="orderModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2>🧾 Orderdetaljer</h2>
+        <div id="orderDetails"></div>
+    </div>
+</div>
+
+<script>
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("role");
+
+    if (!token || role !== "ADMIN") {
+      alert("Endast administratörer kan se dashboarden.");
+      window.location.href = "/login.html";
+    }
+
+    // 🔔 WebSocket
+    let stompClient = null;
+    function connectWebSocket() {
+      const socket = new SockJS("/ws");
+      stompClient = Stomp.over(socket);
+      stompClient.connect({}, () => {
+        stompClient.subscribe("/topic/orders", (message) => {
+          const order = JSON.parse(message.body);
+          showToast(`🆕 Ny order från ${order.userEmail} (${order.totalPrice.toFixed(2)} kr)`, "#28a745");
+          loadOrders();
+        });
+      });
+    }
+
+    // Toast-funktion
+    function showToast(message, color = "#2b3d52") {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.style.backgroundColor = color;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 4000);
+    }
+
+    async function loadDashboard() {
+      const res = await fetch("/api/dashboard", { headers: { "Authorization": "Bearer " + token } });
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById("productCount").textContent = data.productCount;
+      document.getElementById("userCount").textContent = data.userCount;
+      document.getElementById("totalValue").textContent = data.totalValue.toFixed(2);
+      document.getElementById("avgPrice").textContent = data.avgPrice.toFixed(2);
+      renderChart(data.productNames, data.productPrices);
+      renderCategoryChart();
+      loadOrders();
+    }
+
+    function renderChart(names, prices) {
+      const ctx = document.getElementById('productChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: { labels: names, datasets: [{ label: 'Pris (kr)', data: prices, backgroundColor: 'rgba(0,123,255,0.5)', borderColor: '#007bff' }] },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    async function renderCategoryChart() {
+      const res = await fetch("/api/products", { headers: { "Authorization": "Bearer " + token } });
+      const products = await res.json();
+      const counts = {};
+      products.forEach(p => counts[p.category || "Okänd"] = (counts[p.category || "Okänd"] || 0) + 1);
+      const ctx = document.getElementById('categoryChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: { labels: Object.keys(counts), datasets: [{ data: Object.values(counts), backgroundColor: ['#ff6384','#36a2eb','#ffce56','#4bc0c0','#9966ff'] }] }
+      });
+    }
+
+    async function loadOrders() {
+      const res = await fetch("/api/orders", { headers: { "Authorization": "Bearer " + token } });
+      const orders = await res.json();
+      const tbody = document.querySelector("#ordersTable tbody");
+      tbody.innerHTML = "";
+      orders.forEach(order => {
+        tbody.innerHTML += `
+          <tr onclick="showOrderDetails('${order.id}')">
+            <td>${order.id}</td>
+            <td>${order.userEmail}</td>
+            <td>${order.items.length}</td>
+            <td>${order.totalPrice.toFixed(2)}</td>
+            <td class="status-${order.status.toLowerCase()}">${order.status}</td>
+            <td>${new Date(order.createdAt).toLocaleString()}</td>
+          </tr>`;
+      });
+    }
+
+    async function showOrderDetails(id) {
+      const res = await fetch(`/api/orders/${id}`, { headers: { "Authorization": "Bearer " + token } });
+      const order = await res.json();
+      document.getElementById("orderDetails").innerHTML = `
+        <p><strong>Kund:</strong> ${order.userEmail}</p>
+        <p><strong>Status:</strong>
+          <select onchange="updateStatus('${order.id}', this.value)">
+            <option ${order.status==="Pending"?"selected":""}>Pending</option>
+            <option ${order.status==="Shipped"?"selected":""}>Shipped</option>
+            <option ${order.status==="Delivered"?"selected":""}>Delivered</option>
+          </select>
+        </p>
+        <h3>Produkter:</h3>
+        ${order.items.map(i => `<div class='order-item'>${i.productName} — ${i.quantity} st — ${i.price} kr/st</div>`).join('')}
+        <p><strong>Totalt:</strong> ${order.totalPrice.toFixed(2)} kr</p>
+      `;
+      document.getElementById("orderModal").style.display = "flex";
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`/api/orders/${id}/status?status=${status}`, { method: "PUT", headers: { "Authorization": "Bearer " + token } });
+      loadOrders();
+    }
+
+    function closeModal() {
+      document.getElementById("orderModal").style.display = "none";
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/login.html";
+    }
+
+    connectWebSocket();
+    loadDashboard();
+</script>
+</body>
+</html>

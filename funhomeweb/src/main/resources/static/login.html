@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <title>🔐 FunHomeWeb Login</title>
+    <style>
+        body {
+          font-family: "Segoe UI", Arial, sans-serif;
+          background-color: #f0f4fa;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          margin: 0;
+        }
+
+        .container {
+          background: white;
+          padding: 40px;
+          border-radius: 12px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          width: 350px;
+          text-align: center;
+        }
+
+        h1 {
+          color: #2b3d52;
+          margin-bottom: 20px;
+        }
+
+        input, select {
+          width: 100%;
+          padding: 10px;
+          margin: 8px 0;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+
+        button {
+          width: 100%;
+          padding: 12px;
+          margin-top: 10px;
+          background-color: #007bff;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        button:hover {
+          background-color: #0056b3;
+        }
+
+        .toggle {
+          margin-top: 15px;
+          color: #007bff;
+          cursor: pointer;
+          font-size: 14px;
+        }
+
+        .error {
+          color: red;
+          font-size: 14px;
+          margin-top: 10px;
+        }
+
+        .success {
+          color: green;
+          font-size: 14px;
+          margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 id="formTitle">🔐 Logga in</h1>
+
+    <form id="authForm">
+        <input type="text" id="name" placeholder="Namn (endast vid registrering)" style="display:none;">
+        <input type="email" id="email" placeholder="E-post" required>
+        <input type="password" id="password" placeholder="Lösenord" required>
+        <select id="role" style="display:none;">
+            <option value="CUSTOMER">Kund</option>
+            <option value="ADMIN">Admin</option>
+        </select>
+
+        <button type="submit" id="submitBtn">Logga in</button>
+    </form>
+
+    <p class="toggle" id="toggleText">Har du inget konto? Registrera dig här</p>
+
+    <p id="message" class="error"></p>
+</div>
+
+<script>
+    const apiBase = "/api/auth";
+    let isRegisterMode = false;
+
+    const form = document.getElementById("authForm");
+    const nameField = document.getElementById("name");
+    const roleField = document.getElementById("role");
+    const toggleText = document.getElementById("toggleText");
+    const formTitle = document.getElementById("formTitle");
+    const message = document.getElementById("message");
+    const submitBtn = document.getElementById("submitBtn");
+
+    toggleText.addEventListener("click", () => {
+      isRegisterMode = !isRegisterMode;
+      if (isRegisterMode) {
+        formTitle.textContent = "🆕 Registrera konto";
+        nameField.style.display = "block";
+        roleField.style.display = "block";
+        submitBtn.textContent = "Registrera";
+        toggleText.textContent = "Har redan konto? Logga in här";
+      } else {
+        formTitle.textContent = "🔐 Logga in";
+        nameField.style.display = "none";
+        roleField.style.display = "none";
+        submitBtn.textContent = "Logga in";
+        toggleText.textContent = "Har du inget konto? Registrera dig här";
+      }
+      message.textContent = "";
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      message.textContent = "";
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const name = document.getElementById("name").value.trim();
+      const role = document.getElementById("role").value;
+
+      try {
+        const endpoint = isRegisterMode ? `${apiBase}/register` : `${apiBase}/login`;
+        const body = isRegisterMode
+          ? { name, email, password, role }
+          : { email, password };
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          message.textContent = data.message || "Fel vid inloggning/registrering.";
+          return;
+        }
+
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("role", data.role || "CUSTOMER");
+          localStorage.setItem("email", email);
+
+          message.classList.remove("error");
+          message.classList.add("success");
+          message.textContent = "✅ Inloggad! Omdirigerar...";
+
+          setTimeout(() => {
+            if (data.role === "ADMIN") {
+              window.location.href = "/dashboard.html";
+            } else {
+              window.location.href = "/index.html";
+            }
+          }, 1000);
+        } else {
+          message.textContent = "Inloggning misslyckades. Ingen token mottagen.";
+        }
+      } catch (error) {
+        console.error(error);
+        message.textContent = "Ett fel uppstod vid anslutning till servern.";
+      }
+    });
+</script>
+</body>
+</html>
